@@ -2,7 +2,13 @@
 
 [![Build Status](https://drone.io/github.com/hjr265/node-whois/status.png)](https://drone.io/github.com/hjr265/node-whois/latest)
 
-Node WHOIS is a WHOIS client for Node.js.
+Node-WHOIS is a WHOIS client for Node.js.
+
+# Changes:
+* Removed CoffeeScript, which I find has less legibility than "normal" JS.
+* Keeps the same API, usage, and examples*.
+* \* Some examples were removed that no longer work due to the whois provider (ripe.net).
+* Removed Mocha and Coffee-script from required packages (Mocha should be installed globally if you are testing).
 
 ## Installation
 
@@ -10,7 +16,7 @@ Node WHOIS is a WHOIS client for Node.js.
 
     $ npm install -g whois
 
-#### Usage
+#### CLI Usage
 
     whois [options] address
 
@@ -29,13 +35,33 @@ Node WHOIS is a WHOIS client for Node.js.
 #### Usage
 
 ```js
-var whois = require('whois')
-whois.lookup('google.com', function(err, data) {
-	console.log(data)
+const whois = require('whois');
+whois.lookup('google.com', (err, data) => {
+    if(err) {
+        handleError();
+    }
+	console.log(data);
 })
 ```
 
-You may pass an object in between the address and the callback function to tweak the behavior of the lookup function:
+You may also use Promises using ``util.promisify``!
+```js
+const $whois = require('whois');
+const { promisify } = require('util');
+const whois = promisify($whois.lookup);
+
+whois('google.com')
+    .then(data => console.log(data));
+
+(async () => {
+    const data = await whois('google.com');
+    console.log(data);
+})();
+
+```
+
+You may pass an object in between the address and the callback function to tweak the behavior of the lookup function.
+The default options are shown below:
 
 ```js
 {

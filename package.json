@@ -23,13 +23,11 @@
     "url": "https://github.com/hjr265/node-whois/issues"
   },
   "homepage": "https://github.com/hjr265/node-whois",
-  "devDependencies": {
-    "coffee-script": "^1.6.3",
-    "mocha": "^5.2.0"
-  },
+  "devDependencies": {},
   "dependencies": {
     "optimist": "^0.6.1",
-    "socks": "^2.2.2",
-    "underscore": "^1.9.1"
+    "punycode": "^2.1.1",
+    "socks": "^2.3.3",
+    "underscore": "^1.9.2"
   }
 }
