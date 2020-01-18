@@ -9,24 +9,14 @@ Node-WHOIS is a WHOIS client for Node.js.
 * Keeps the same API, usage, and examples*.
 * \* Some examples were removed that no longer work due to the whois provider (ripe.net).
 * Removed Mocha and Coffee-script from required packages (Mocha should be installed globally if you are testing).
+* Removed Optimist and CLI usage. It will be added back eventually.
+* UnderscoreJS will be completely removed soon.
 
 ## Installation
 
 ### Global
 
     $ npm install -g whois
-
-#### CLI Usage
-
-    whois [options] address
-
-    Options:
-      -s, --server   whois server                         [default: null]
-      -f, --follow   number of times to follow redirects  [default: 0]
-      -p, --proxy    SOCKS proxy                          [default: null]
-      -v, --verbose  show verbose results                 [default: false]
-      -b, --bind     bind to a local IP address           [default: null]
-      -h, --help     display this help message            [default: false]
 
 ### Local
 

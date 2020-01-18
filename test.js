@@ -1,4 +1,3 @@
-const _ = require('underscore');
 const assert = require('assert');
 const whois = require('./index');
 
@@ -7,7 +6,7 @@ describe('#lookup()', () => {
 		whois.lookup('google.com', (err, data) => {
 			assert.ifError(err);
 			assert.notEqual(data.toLowerCase().indexOf('domain name: google.com'), -1);
-            done()
+            done();
         });
     });
 

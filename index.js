@@ -1,5 +1,5 @@
-const _ = require('underscore');
-const net = require('net')
+const { once } = require('underscore');
+const { isIP, connect } = require('net')
 const { SocksClient } = require('socks');
 const punycode = require('punycode');
 
@@ -25,12 +25,10 @@ const lookup = (addr, options, done) => {
         options = {}
     }
 
-    _.defaults(options, {
-		follow: 2,
-        timeout: 60000 // 60 seconds in ms
-    });
+    options.follow = options.follow || 2;
+    options.timeout = options.timeout || 60000;
 
-	done = _.once(done);
+	done = once(done);
 
 	let server = options.server;
 	let proxy = options.proxy;
@@ -38,13 +36,10 @@ const lookup = (addr, options, done) => {
 
     if(!server) {
 		switch(true) {
-			case _.contains(addr, '@'):
-				done(new Error('lookup: email addresses not supported'))
-				return;
-
-			case net.isIP(addr) !== 0:
-				server = SERVERS['_']['ip']
-
+			case addr.includes('@'):
+				return done(new Error('lookup: email addresses not supported'));
+			case isIP(addr) !== 0:
+				server = SERVERS['_']['ip'];
 			default:
 				let tld = punycode.toASCII(addr);
 				while(true) {
@@ -58,43 +53,37 @@ const lookup = (addr, options, done) => {
     }
 
     if(!server) {
-		done(new Error('lookup: no whois server is known for this kind of object'));
-        return;
+		return done(new Error('lookup: no whois server is known for this kind of object'));
     }
 
     if(typeof server === 'string') {
-		const parts = server.split(':');
+		const [host, port] = server.split(':');
 		server = {
-			host: parts[0],
-			port: parts[1]
+			host: host,
+			port: port
         }
     }
 
     if(typeof proxy === 'string') {
-		parts = proxy.split(':');
+		const [ipaddress, port] = proxy.split(':');
 		proxy = {
-			ipaddress: parts[0],
-            port: parseInt(parts[1])
+			ipaddress: ipaddress,
+            port: parseInt(port)
         }
     }
 
-    _.defaults(server, {
-		port: 43,
-		query: "$addr\r\n"
-    });
+    server.port = server.port || 43;
+    server.query = server.query || '$addr\r\n';
 
 	if(proxy) {
-		_.defaults(proxy, {
-            type: 5
-        });
+        proxy.type = proxy.type || 5;
     }
 
 	const _lookup = (socket, done) => {
-		let idn = addr;
-		if(server.punycode !== false && options.punycode !== false)
-			idn = punycode.toASCII(addr);
+        const idn = server.punycode !== false && options.punycode !== false ? punycode.toASCII(addr) : addr;
+        
 		if(options.encoding) 
-            socket.setEncoding(options.encoding || 'utf8');
+            socket.setEncoding(options.encoding);
             
 		socket.write(server.query.replace('$addr', idn));
 
@@ -108,12 +97,13 @@ const lookup = (addr, options, done) => {
 
 		socket.on('error', err => done(err));
 
-        socket.on('close', err => {
+        socket.on('close', () => {
 			if(options.follow > 0) {
-				match = data.replace(/\r/gm, '').match(/(ReferralServer|Registrar Whois|Whois Server|WHOIS Server|Registrar WHOIS Server):[^\S\n]*((?:r?whois|https?):\/\/)?(.*)/);
-				if(q(match) && match[3] != server.host) {
-					options = _.extend({}, options, {
-						follow: options.follow - 1,
+				const match = data.replace(/\r/gm, '').match(/(ReferralServer|Registrar Whois|Whois Server|WHOIS Server|Registrar WHOIS Server):[^\S\n]*((?:r?whois|https?):\/\/)?(.*)/);
+				if(q(match) && match[3] !== server.host) {
+                    options = Object.assign({}, {
+                        ...options,
+                        follow: options.follow - 1,
                         server: match[3].trim()
                     });
 					options.server = cleanParsingErrors(options.server);
@@ -143,7 +133,7 @@ const lookup = (addr, options, done) => {
 					data
                 ]);
             } else {
-                done(null, data)
+                done(null, data);
             }
         });
     }
@@ -166,10 +156,8 @@ const lookup = (addr, options, done) => {
                 socket.setTimeout(timeout);
             }
 
-            // error vvvv
 			_lookup(socket, done);
-
-            socket.resume()
+            socket.resume();
         });
     } else {
 		sockOpts = {
@@ -181,73 +169,11 @@ const lookup = (addr, options, done) => {
             sockOpts.localAddress = options.bind;
         }
 
-		socket = net.connect(sockOpts);
+		socket = connect(sockOpts);
 		if(timeout)
 			socket.setTimeout(timeout);
 		_lookup(socket, done);
     }
-}
-
-if(module === require.main) {
-	const optimist = require('optimist')
-        .usage('$0 [options] address')
-        .default('s', null)
-        .alias('s', 'server')
-        .describe('s', 'whois server')
-        .default('f', 0)
-        .alias('f', 'follow')
-        .describe('f', 'number of times to follow redirects')
-        .default('p', null)
-        .alias('p', 'proxy')
-        .describe('p', 'SOCKS proxy')
-        .boolean('v')
-        .default('v', false)
-        .alias('v', 'verbose')
-        .describe('v', 'show verbose results')
-        .default('b', null)
-        .alias('b', 'bind')
-        .describe('b', 'bind to a local IP address')
-        .boolean('h')
-        .default('h', false)
-        .alias('h', 'help')
-        .describe('h', 'display this help message');
-
-	if(optimist.argv.h) {
-		console.log(optimist.help());
-        process.exit(0);
-    }
-
-	if(!q(optimist.argv._[0])) {
-		console.log(optimist.help());
-        process.exit(1);
-    }
-
-	lookup(optimist.argv._[0], {
-        server: optimist.argv.server, 
-        follow: optimist.argv.follow, 
-        proxy: optimist.argv.proxy, 
-        verbose: optimist.argv.verbose, 
-        bind: optimist.argv.bind 
-    }, (err, data) => {
-		if(q(err)) {
-			console.log(err)
-            process.exit(1);
-        }
-
-		if(Array.isArray(data)) {
-			for(part in data) {
-				if('object' == typeof part.server) {
-					console.log(part.server.host);
-                } else {
-                    console.log(part.server);
-                }
-                console.log(part.data);
-                console.log();
-            }
-        } else {
-            console.log(data);
-        }
-    });
 }
 
 module.exports = { lookup };
